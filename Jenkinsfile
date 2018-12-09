@@ -5,11 +5,12 @@ timestamps {
  def jobName = null
  def microSvcName = null
  def app
- //def gitCreds = 'AWGITTAPP'
- def gitCreds =  '32f2c3c2-c19e-431a-b421-a4376fce1186'
+ def gitCreds = 'AWGITTAPP'
+ // def gitCreds =  '32f2c3c2-c19e-431a-b421-a4376fce1186'
  def shortGitCommit = null
  def environment = null
- def branch = null
+ def branch = 'master'
+ def BRANCH_NAME = 'master'
 
 
 
@@ -24,14 +25,14 @@ timestamps {
       def clusterName
 
 
- if  (env.BRANCH_NAME == "staging") {
+ if  (BRANCH_NAME == "staging") {
         wepackCfg         = ""
         imageTag          = ""
         serviceName       = ""
         taskFamily        = ""
         dockerFilePrefix  = STAGING
         clusterName       = ""
-      } else if  (env.BRANCH_NAME == "master") {
+      } else if  (BRANCH_NAME == "master") {
         wepackCfg         = ""
         imageTag          = ""
         serviceName       = ""
@@ -40,48 +41,49 @@ timestamps {
         clusterName       = ""
       }
 
-      def remoteImageTag  = "${imageTag}-${BUILD_NUMBER}"
+      def remoteImageTag  = "${BUILD_NUMBER}"
       def ecRegistry      = "https://758637906269.dkr.ecr.us-east-1.amazonaws.com/connector-dev"
-
-}
+      def awscred		  = "ecr:us-east-1:aws_cred_id"
+	  def repo  		  = "758637906269.dkr.ecr.us-east-1.amazonaws.com/connector-dev"
 
 stage('Execute Build') {
-  node(ec2) {
+  node('ec2') {
    
-  
-
-   projectName = jobName.split(/\//)[1]
-   branch = jobName.split(/\//)[3]
+stage('Set Variables') {
+  node {
+   //echo sh(returnStdout: true, script: 'env')
+   deploy_Env = env.BRANCH_NAME
+   jobName = env.JOB_NAME
+   projectName = jobName
    environment = "${deploy_Env}"
-   
+  }
+ }  
 
 try {
     stage('Build') {
-     stage 'Cleanup'
-     deleteDir()
-
-     stage 'Checkout'
-     checkout scm
+     
      dir('pythona-app-test') {
-      deleteDir()
+      //deleteDir()
       git url: "https://github.com/nik786/pythona-app-test.git", branch: "${branch}", credentialsId: "${gitCreds}"
+	  sh 'printenv'
       def GIT_COMMIT_HASH = sh(script: "git log -n 1 --pretty=format:'%H'", returnStdout: true)
       shortGitCommit = GIT_COMMIT_HASH[0..6]
       
 
-      stage("Docker build") {  
-        sh "docker build --no-cache -t repo:${remoteImageTag} \
-                                    -f ${dockerFilePrefix}.Dockerfile ."
+      stage("Docker build") {
+	   docker.withRegistry(ecRegistry, "${awscred}") {
+        sh "docker build --no-cache -t ${repo}:${remoteImageTag} \
+                                    -f ./Dockerfile ."
+	   }
       }
 
      stage("Docker push") {
         // NOTE:
         //  ecr: is a required prefix
-        //  eu-central-1: is the region where the Registery located
-        //  aws-ecr: is the credentials ID located in the jenkins credentials
+        //  aws_cred_id: is the credentials ID located in the jenkins credentials
         //
-        docker.withRegistry(ecRegistry, "ecr:eu-central-1:aws-ecr") {
-          docker.image("repo:${remoteImageTag}").push(remoteImageTag)
+        docker.withRegistry(ecRegistry, "${awscred}") {
+          docker.image("${repo}:${remoteImageTag}").push(remoteImageTag)
 		  currentBuild.result = 'SUCCESS'
         }
       }
@@ -99,7 +101,7 @@ try {
         region: "us-east-1", 
         service: "python-task",
         cluster: "connector-clus",
-        image: "758637906269.dkr.ecr.us-east-1.amazonaws.com/connector-dev:"+IMAGE_NO
+        image: "${repo}:${IMAGE_NO}"
         ])
 	String outputFile="imagepayload.json"
 	writeJSON file: outputFile, json: payload, pretty: 2
@@ -108,36 +110,31 @@ try {
 	currentBuild.result = 'SUCCESS' 
 
    stage('execute smoke test'){
-            steps {
-                  ansiblePlaybook \
-                      playbook: '/etc/ansible/helo.yml',
-                      inventory: '/etc/ansible/inventories/local.yml',
-                      extraVars: [
-                          ansible_ssh_user: "$SSH_USR",
-                          ansible_ssh_pass: "$SSH_PSW",
-                          ansible_become_pass: "$SSH_PSW",
-                          current_directory: "$WORKSPACE"
-                      ]
-              }
+		  ansiblePlaybook \
+			  playbook: '/etc/ansible/helo.yml',
+			  inventory: '/etc/ansible/inventories/local.yml'/*,
+			  extraVars: [
+				  ansible_ssh_user: "$SSH_USR",
+				  ansible_ssh_pass: "$SSH_PSW",
+				  ansible_become_pass: "$SSH_PSW",
+				  current_directory: "$WORKSPACE"
+			  ]*/
         }
 
    stage('deployemt successful'){
-            sh python /etc/ansible/helo.py
+            sh "python /etc/ansible/helo.py"
           }
  
    stage('deployemt notification'){
-            sh  /etc/ansible/helo.sh
+            sh "sh /etc/ansible/helo.sh"
           }
-		  
- catch (Exception err) {
-    currentBuild.result = 'FAILURE'
-   } finally {
+  } 
+ finally {
     if (currentBuild.result == 'SUCCESS') {
      stage 'Announce'
    
     }
    }
+  }
 }
-
-
-
+}
