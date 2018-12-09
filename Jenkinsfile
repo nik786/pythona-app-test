@@ -25,21 +25,7 @@ timestamps {
       def clusterName
 
 
- if  (BRANCH_NAME == "staging") {
-        wepackCfg         = ""
-        imageTag          = ""
-        serviceName       = ""
-        taskFamily        = ""
-        dockerFilePrefix  = STAGING
-        clusterName       = ""
-      } else if  (BRANCH_NAME == "master") {
-        wepackCfg         = ""
-        imageTag          = ""
-        serviceName       = ""
-        taskFamily        = ""
-        dockerFilePrefix  = PRODUCTION
-        clusterName       = ""
-      }
+ 
 
       def remoteImageTag  = "${BUILD_NUMBER}"
       def ecRegistry      = "https://758637906269.dkr.ecr.us-east-1.amazonaws.com/connector-dev"
