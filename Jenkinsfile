@@ -5,8 +5,8 @@ timestamps {
  def jobName = null
  def microSvcName = null
  def app
- def gitCreds = 'AWGITTAPP'
- // def gitCreds =  '32f2c3c2-c19e-431a-b421-a4376fce1186'
+ //def gitCreds = 'AWGITTAPP'
+ def gitCreds =  '32f2c3c2-c19e-431a-b421-a4376fce1186'
  def shortGitCommit = null
  def environment = null
  def branch = null
