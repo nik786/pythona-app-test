@@ -9,7 +9,7 @@ RUN yum install -y git vim curl net-tools && \
     yum clean all
 
 # Copy/mount HTML files into the container
-ADD chat.tar.gz /var/www/html/
+#ADD chat.tar.gz /var/www/html/
 
 # Set ownership and permissions for Apache
 RUN chown -R apache:apache /var/www/html/ && \
