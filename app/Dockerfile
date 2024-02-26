@@ -12,8 +12,8 @@ RUN yum install -y git vim curl net-tools && \
 #ADD chat.tar.gz /var/www/html/
 
 # Set ownership and permissions for Apache
-RUN chown -R apache:apache /var/www/html/ && \
-    chmod 755 /var/www/html/*
+#RUN chown -R apache:apache /var/www/html/ && \
+#    chmod 755 /var/www/html/*
 
 # Expose port 80
 EXPOSE 80
